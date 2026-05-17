@@ -1,0 +1,19 @@
+# Personal exports and private data
+exports/
+export.csv
+export_ddc.csv
+
+# Python
+__pycache__/
+*.py[cod]
+.env
+venv/
+.venv/
+
+# macOS
+.DS_Store
+
+# Note: vault/vault.db IS committed in this repo
+# so the demo has pre-seeded bookmarks and clips.
+# When you use this as your own vault, you can delete
+# vault/vault.db and it will be recreated fresh.
