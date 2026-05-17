@@ -1700,6 +1700,18 @@ mark {
 }
 .uploaded-item .uwc { color: var(--ink3); font-size: .68rem; white-space: nowrap; }
 .uploaded-item:hover { background: var(--paper3); }
+.uploaded-item .usv {
+  background: none;
+  border: 1px solid var(--accent2);
+  color: var(--accent2);
+  cursor: pointer;
+  font-size: .6rem;
+  font-family: var(--mono);
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.uploaded-item .usv:hover { background: var(--accent2); color: white; }
 .uploaded-item .urm {
   background: none;
   border: none;
@@ -1715,7 +1727,7 @@ mark {
 <body>
 
 <header>
-  <div class="logo">Fisher <span>Vault</span> Search <span style='font-size:.65rem;opacity:.6'>+ upload</span></div>
+  <div class="logo" onclick="goHome()" style="cursor:pointer" title="Home">Fisher <span>Vault</span> Search <span style='font-size:.65rem;opacity:.6'>+ upload</span></div>
   <div class="search-wrap">
     <input type="text" id="search-input" placeholder="Search notes, texts, and bookmarks…" autocomplete="off" onkeydown="if(event.key==='Enter')doSearch()">
     <button id="search-btn" onclick="doSearch()">Search</button>
@@ -2120,14 +2132,52 @@ function resetUploadZone() {
 async function refreshUploadedList() {
   const files = await(await fetch('/api/uploaded')).json();
   const ul = document.getElementById('uploaded-list');
-  if (!files.length) { ul.innerHTML = ''; return; }
-  ul.innerHTML = files.map(f => `
-    <div class="uploaded-item" onclick="openUploadedFile('${esc(f.filename)}')" style="cursor:pointer" title="Click to view">
-      <span class="uname" title="${esc(f.filename)}">${esc(f.filename)}</span>
-      <span class="uwc">${f.words.toLocaleString()}w</span>
-      <button class="urm" onclick="event.stopPropagation();removeUploaded('${esc(f.filename)}')" title="Remove">✕</button>
-    </div>
-  `).join('');
+  ul.innerHTML = '';
+  if (!files.length) return;
+  files.forEach(function(f) {
+    const div = document.createElement('div');
+    div.className = 'uploaded-item';
+    div.title = 'Click to view';
+    div.style.cursor = 'pointer';
+    div.onclick = function(e) { e.preventDefault(); openUploadedFile(f.filename); };
+
+    const name = document.createElement('span');
+    name.className = 'uname';
+    name.title = f.filename;
+    name.textContent = f.filename;
+
+    const wc = document.createElement('span');
+    wc.className = 'uwc';
+    wc.textContent = f.words.toLocaleString() + 'w';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.className = 'usv';
+    saveBtn.textContent = 'save';
+    saveBtn.title = 'Save to vault permanently';
+    saveBtn.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      saveUploadedToVault(f.filename, saveBtn);
+    };
+
+    const rmBtn = document.createElement('button');
+    rmBtn.type = 'button';
+    rmBtn.className = 'urm';
+    rmBtn.title = 'Remove';
+    rmBtn.textContent = '✕';
+    rmBtn.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      removeUploaded(f.filename);
+    };
+
+    div.appendChild(name);
+    div.appendChild(wc);
+    div.appendChild(saveBtn);
+    div.appendChild(rmBtn);
+    ul.appendChild(div);
+  });
 }
 
 function getExt(filename) {
@@ -2217,6 +2267,53 @@ async function openUploadedFile(filename) {
   openViewer(filename, res.text, lastQuery, false, null);
 }
 
+async function saveUploadedToVault(filename, btn) {
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
+  try {
+    const res = await fetch('/api/save_to_vault', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({filename: filename})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      if (btn) {
+        btn.textContent = 'saved';
+        btn.style.color = '#4a7c6e';
+        btn.disabled = true;
+      }
+      // Refresh folder list
+      try {
+        const s = await(await fetch('/api/stats')).json();
+        const fl = document.getElementById('folder-list');
+        if (fl && s.folders) {
+          fl.innerHTML = '';
+          const allDiv = document.createElement('div');
+          allDiv.className = 'folder-item active';
+          allDiv.dataset.folder = '';
+          allDiv.onclick = function() { filterFolder(); };
+          allDiv.innerHTML = '<span class="fbl">All folders</span><span class="fc">' + (s.files||0).toLocaleString() + '</span>';
+          fl.appendChild(allDiv);
+          Object.entries(s.folders).sort(function(a,b){return b[1]-a[1];}).forEach(function(entry) {
+            const d = document.createElement('div');
+            d.className = 'folder-item';
+            d.dataset.folder = entry[0];
+            d.onclick = function() { filterFolder(entry[0]); };
+            d.innerHTML = '<span class="fbl">' + esc(entry[0]||'(root)') + '</span><span class="fc">' + entry[1] + '</span>';
+            fl.appendChild(d);
+          });
+        }
+      } catch(e) {}
+    } else {
+      if (btn) { btn.textContent = 'save'; btn.disabled = false; }
+      alert('Save failed: ' + (data.error || 'unknown'));
+    }
+  } catch(e) {
+    if (btn) { btn.textContent = 'save'; btn.disabled = false; }
+    alert('Save error: ' + e.message);
+  }
+}
+
 async function removeUploaded(filename) {
   await fetch('/api/upload/remove', {
     method: 'POST',
@@ -2235,6 +2332,23 @@ function setScope(scope) {
     document.getElementById('scope-' + s).classList.toggle('active', s === scope);
   });
   if (lastQuery) doSearch();
+}
+
+function goHome() {
+  lastQuery = '';
+  allResults = [];
+  document.getElementById('search-input').value = '';
+  document.getElementById('main').innerHTML =
+    '<div class="welcome">' +
+    '<h2 id="welcome-quote">&ldquo;Manners are of more importance than laws.&rdquo;</h2>' +
+    '<p>Search across every note, essay, quote, and converted document in your vault. Type a word, phrase, or sentence fragment to find it anywhere.</p>' +
+    '<div class="hint">Press Enter to search</div>' +
+    '</div>';
+  // Reset active folder
+  activeFolder = '';
+  document.querySelectorAll('.folder-item').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.folder === '');
+  });
 }
 
 async function boot() {
@@ -2553,12 +2667,13 @@ if __name__ == '__main__':
     CONFIG = load_config(args.config)
     globals()['CONFIG'] = CONFIG
 
-    # Resolve vault path (CLI > config > default)
-    vault_path = args.vault or CONFIG['vault']['path']
+    import os as _os
+    # Resolve vault path: CLI > env var > config > default
+    vault_path = args.vault or _os.environ.get('VAULT_PATH') or CONFIG['vault']['path']
     VAULT_DIR = Path(vault_path).expanduser().resolve()
 
-    # Resolve database path (CLI > config > next to vault)
-    db_str = args.db or CONFIG['database']['path']
+    # Resolve database path: CLI > env var > config > default
+    db_str = args.db or _os.environ.get('DB_PATH') or CONFIG['database']['path']
     db_path = Path(db_str).expanduser().resolve()
 
     # Auto-create vault folder if needed
@@ -2569,9 +2684,9 @@ if __name__ == '__main__':
     init_db(db_path)
     globals()['DB_PATH'] = db_path
 
-    # Server settings
-    port = args.port or CONFIG['server']['port']
-    host = args.host or CONFIG['server']['host']
+    # Server settings: CLI > env var > config > default
+    port = args.port or int(_os.environ.get('PORT', 0)) or CONFIG['server']['port']
+    host = args.host or _os.environ.get('HOST') or CONFIG['server']['host']
 
     app_name = CONFIG['app']['name']
     print(f'\n✦  {app_name}')

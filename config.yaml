@@ -1,25 +1,18 @@
-# Personal Vault Configuration
-# Edit this file, then run ./start.sh
+# Personal Vault — Demo Configuration
+# For local use, edit vault.path to point at your notes folder.
+# On Render, these values are overridden by environment variables.
 
 vault:
-  # Path to your notes and documents folder
-  # Will be created automatically if it doesn't exist
-  path: ~/Documents/vault
+  path: ./vault
 
 database:
-  # SQLite database — created automatically
-  path: ~/Documents/vault/vault.db
+  path: ./vault/vault.db
 
 server:
-  # Port to run on
   port: 5002
-  # 127.0.0.1 = local only (most secure)
-  # 0.0.0.0   = accessible from other devices on your network
   host: 127.0.0.1
 
 app:
-  # Name shown in the browser header
   name: Personal Vault
-  # Quote shown on the welcome screen
   welcome_quote: "Manners are of more importance than laws."
   welcome_quote_author: Edmund Burke

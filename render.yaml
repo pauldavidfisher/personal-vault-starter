@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: personal-vault-demo
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 vault_search_upload.py
+    envVars:
+      - key: VAULT_PATH
+        value: ./vault
+      - key: DB_PATH
+        value: ./vault/vault.db
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0
