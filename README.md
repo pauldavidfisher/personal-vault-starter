@@ -1,8 +1,18 @@
 # Personal Vault — Starter
 
+**[→ Live Demo](https://personal-vault-starter.onrender.com)**
+
 The quickest way to get Personal Vault running on your machine.
 
 **Personal Vault** is a local personal library app. Fetch any text from the web, highlight passages that matter, add your own notes, and build a searchable library that is entirely yours.
+
+---
+
+## Try the live demo first
+
+**[https://personal-vault-starter.onrender.com](https://personal-vault-starter.onrender.com)**
+
+Search for "wisdom", "virtue", or "history". Browse the folders. Click "All clips" to see saved highlights. Then come back and get it running locally.
 
 ---
 
@@ -17,14 +27,10 @@ cd personal-vault-starter
 
 ### 2. Edit config.yaml
 
-Open `config.yaml` and set your vault path:
-
 ```yaml
 vault:
   path: ~/Documents/vault   # point this at your notes folder
 ```
-
-The vault folder will be created automatically if it doesn't exist.
 
 ### 3. Run
 
@@ -32,15 +38,13 @@ The vault folder will be created automatically if it doesn't exist.
 ./start.sh
 ```
 
-Then open http://localhost:5002 in your browser.
+Open http://localhost:5002 in your browser.
 
 ---
 
 ## What you get
 
-A local web app with:
-
-- **Search** across all your notes, fetched texts, clips, and bookmarks
+- **Search** across all your notes, fetched texts, clips, and bookmarks simultaneously
 - **Fetch any URL** — pulls full text from Project Gutenberg, Wikipedia, CCEL, and most websites, saved permanently to your vault
 - **Clip passages** — select any text in the viewer, add a note, build a personal commonplace book
 - **Upload files** — drag and drop `.txt`, `.md`, `.rtf`, `.pdf`, or `.csv`
@@ -51,6 +55,8 @@ A local web app with:
 
 ## Your vault folder
 
+Put any `.txt`, `.md`, or `.rtf` files in your vault folder and they'll be indexed and searchable immediately.
+
 ```
 your-vault/
   fetched/        ← texts saved via Fetch a URL
@@ -59,37 +65,22 @@ your-vault/
   ...             ← any folders you like
 ```
 
-Put any `.txt`, `.md`, or `.rtf` files in the vault folder and they'll be indexed and searchable immediately.
-
----
-
-## Importing bookmarks (optional)
-
-If you use Raindrop.io:
-
-1. Export your bookmarks from Raindrop as CSV
-2. Run the classifier:
-```bash
-python3 raindrop_ddc.py --input your-export.csv --output export_ddc.csv
-```
-3. Drop `export_ddc.csv` into the upload zone in the app — it will import automatically
-
 ---
 
 ## Configuration
 
-Edit `config.yaml` to customize:
+Edit `config.yaml`:
 
 ```yaml
 vault:
-  path: ~/Documents/vault        # your notes folder
+  path: ~/Documents/vault
 
 database:
-  path: ~/Documents/vault/vault.db  # created automatically
+  path: ~/Documents/vault/vault.db
 
 server:
   port: 5002
-  host: 127.0.0.1                # change to 0.0.0.0 for network access
+  host: 127.0.0.1
 
 app:
   name: Personal Vault
@@ -99,12 +90,23 @@ app:
 
 ---
 
+## Import bookmarks (optional)
+
+If you use Raindrop.io:
+
+```bash
+python3 raindrop_ddc.py --input your-export.csv --output export_ddc.csv
+python3 bookmarks_index.py --input export_ddc.csv
+```
+
+---
+
 ## Requirements
 
 - Python 3.9+
 - macOS, Linux, or Windows
 
-Dependencies are installed automatically by `start.sh`. For better PDF support:
+Dependencies installed automatically by `start.sh`. For PDF support:
 
 ```bash
 pip3 install pymupdf --break-system-packages
@@ -114,6 +116,5 @@ pip3 install pymupdf --break-system-packages
 
 ## Source
 
-This starter pulls from [personal-vault](https://github.com/pauldavidfisher/personal-vault).  
-Built by [Paul Fisher](https://github.com/pauldavidfisher).  
+Built on [personal-vault](https://github.com/pauldavidfisher/personal-vault).  
 MIT License.
