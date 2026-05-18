@@ -74,9 +74,35 @@ except ImportError:
 _UPLOADED_FILES = {}  # filename -> lines[]
 
 app = Flask(__name__)
+CONFIG = {}
+
+# ── Module-level initialization (runs under both gunicorn and python3) ────────
+def _init_from_env():
+    """Initialize VAULT_DIR, DB_PATH, CONFIG from environment or defaults.
+    Called at module load so gunicorn workers have access to these globals.
+    """
+    import os as _os
+    global VAULT_DIR, DB_PATH, CONFIG
+
+    SCRIPT_DIR = Path(__file__).parent.resolve()
+    cfg = load_config()
+    CONFIG = cfg
+
+    vault_path = _os.environ.get('VAULT_PATH') or cfg['vault']['path']
+    _vp = Path(vault_path).expanduser()
+    VAULT_DIR = (_vp if _vp.is_absolute() else SCRIPT_DIR / _vp).resolve()
+
+    db_str = _os.environ.get('DB_PATH') or cfg['database']['path']
+    _dp = Path(db_str).expanduser()
+    DB_PATH = (_dp if _dp.is_absolute() else SCRIPT_DIR / _dp).resolve()
+
+    # Ensure vault folder and database exist
+    VAULT_DIR.mkdir(parents=True, exist_ok=True)
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    init_db(DB_PATH)
+
 VAULT_DIR = None
 DB_PATH = None
-CONFIG = {}
 _INDEX = None  # list of (path, lines[])
 
 def build_index(force=False):
@@ -2654,6 +2680,12 @@ boot();
 </body>
 </html>'''
 
+# Initialize at module load — works for both gunicorn and direct python3 execution
+try:
+    _init_from_env()
+except Exception as _e:
+    print(f'  Warning: init failed: {_e}')
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Personal Vault')
     parser.add_argument('--config', default=None, help='Path to config.yaml')
@@ -2668,26 +2700,21 @@ if __name__ == '__main__':
     globals()['CONFIG'] = CONFIG
 
     import os as _os
-    # Resolve vault path: CLI > env var > config > default
-    # Script directory — used to resolve relative paths on Render
-    SCRIPT_DIR = Path(__file__).parent.resolve()
-
-    vault_path = args.vault or _os.environ.get('VAULT_PATH') or CONFIG['vault']['path']
-    _vp = Path(vault_path).expanduser()
-    VAULT_DIR = (_vp if _vp.is_absolute() else SCRIPT_DIR / _vp).resolve()
-
-    # Resolve database path: CLI > env var > config > default
-    db_str = args.db or _os.environ.get('DB_PATH') or CONFIG['database']['path']
-    _dp = Path(db_str).expanduser()
-    db_path = (_dp if _dp.is_absolute() else SCRIPT_DIR / _dp).resolve()
-
-    # Auto-create vault folder if needed
-    VAULT_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Auto-create database and all tables
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    init_db(db_path)
-    globals()['DB_PATH'] = db_path
+    # CLI args can override the module-level init
+    if args.vault or args.db or args.config:
+        cfg = load_config(args.config)
+        globals()['CONFIG'] = cfg
+        SCRIPT_DIR = Path(__file__).parent.resolve()
+        if args.vault:
+            _vp = Path(args.vault).expanduser()
+            globals()['VAULT_DIR'] = (_vp if _vp.is_absolute() else SCRIPT_DIR / _vp).resolve()
+        if args.db:
+            _dp = Path(args.db).expanduser()
+            db_path = (_dp if _dp.is_absolute() else SCRIPT_DIR / _dp).resolve()
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            init_db(db_path)
+            globals()['DB_PATH'] = db_path
+        VAULT_DIR.mkdir(parents=True, exist_ok=True)
 
     # Server settings: CLI > env var > config > default
     port = args.port or int(_os.environ.get('PORT', 0)) or CONFIG['server']['port']
