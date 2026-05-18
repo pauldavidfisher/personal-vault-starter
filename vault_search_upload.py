@@ -2669,12 +2669,17 @@ if __name__ == '__main__':
 
     import os as _os
     # Resolve vault path: CLI > env var > config > default
+    # Script directory — used to resolve relative paths on Render
+    SCRIPT_DIR = Path(__file__).parent.resolve()
+
     vault_path = args.vault or _os.environ.get('VAULT_PATH') or CONFIG['vault']['path']
-    VAULT_DIR = Path(vault_path).expanduser().resolve()
+    _vp = Path(vault_path).expanduser()
+    VAULT_DIR = (_vp if _vp.is_absolute() else SCRIPT_DIR / _vp).resolve()
 
     # Resolve database path: CLI > env var > config > default
     db_str = args.db or _os.environ.get('DB_PATH') or CONFIG['database']['path']
-    db_path = Path(db_str).expanduser().resolve()
+    _dp = Path(db_str).expanduser()
+    db_path = (_dp if _dp.is_absolute() else SCRIPT_DIR / _dp).resolve()
 
     # Auto-create vault folder if needed
     VAULT_DIR.mkdir(parents=True, exist_ok=True)

@@ -1,15 +1,13 @@
 services:
   - type: web
-    name: personal-vault-demo
+    name: personal-vault-starter
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python3 vault_search_upload.py
+    startCommand: gunicorn vault_search_upload:app --bind 0.0.0.0:$PORT --chdir /opt/render/project/src
     envVars:
       - key: VAULT_PATH
-        value: ./vault
+        value: /opt/render/project/src/vault
       - key: DB_PATH
-        value: ./vault/vault.db
-      - key: PORT
-        value: 10000
+        value: /opt/render/project/src/vault/vault.db
       - key: HOST
         value: 0.0.0.0
